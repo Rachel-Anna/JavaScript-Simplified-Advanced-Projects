@@ -55,29 +55,50 @@ function parse(equation) {
   let number2;
   let operator;
   let step;
+  let stringToReplace;
 
-  let powerOf = /(?<Operand1>\d+)\s*(?<Operator>\*{2})\s*(?<Operand2>\d+)/.exec(
-    equation
-  );
+  let brackets =
+    /\((?<step>(?<Operand1>\d+)(?<Operator>.)(?<Operand2>[^\(\)]))\)/.exec(
+      equation
+    );
 
-  let divideOrMultiply =
-    /(?<Operand1>\d+)\s*(?<Operator>[\/\*])\s*(?<Operand2>\d+)/.exec(equation);
-
-  if (divideOrMultiply) {
-    [number1, operator, number2, step] = getRegexData(divideOrMultiply);
+  if (brackets) {
+    [number1, operator, number2, step, stringToReplace] =
+      getRegexData(brackets);
+    console.log(stringToReplace);
   } else {
-    let addOrSubtract =
-      /(?<Operand1>\d+)\s*(?<Operator>[\+\-])\s*(?<Operand2>\d+)/.exec(
+    let powerOf =
+      /(?<step>(?<Operand1>\d+)\s*(?<Operator>\*{2})\s*(?<Operand2>\d+))/.exec(
         equation
       );
-    if (addOrSubtract) {
-      [number1, operator, number2, step] = getRegexData(addOrSubtract);
+
+    if (powerOf) {
+      [number1, operator, number2, step, stringToReplace] =
+        getRegexData(powerOf);
+    } else {
+      let divideOrMultiply =
+        /(?<step>(?<Operand1>\d+)\s*(?<Operator>[\/\*])\s*(?<Operand2>\d+))/.exec(
+          equation
+        );
+      if (divideOrMultiply) {
+        [number1, operator, number2, step, stringToReplace] =
+          getRegexData(divideOrMultiply);
+      } else {
+        let addOrSubtract =
+          /(?<step>(?<Operand1>\d+)\s*(?<Operator>[\+\-])\s*(?<Operand2>\d+))/.exec(
+            equation
+          );
+        if (addOrSubtract) {
+          [number1, operator, number2, step, stringToReplace] =
+            getRegexData(addOrSubtract);
+        }
+      }
     }
   }
 
   let result = solve(number1, operator, number2);
 
-  let newEquation = replaceNextStep(equation, step, result);
+  let newEquation = replaceNextStep(equation, stringToReplace, result);
 
   if (/^-*\d+\.?\d*e*\d*$/.test(newEquation)) {
     results.append(newEquation);
@@ -91,13 +112,17 @@ function getRegexData(operation) {
   let number1 = parseFloat(operation.groups.Operand1);
   let number2 = parseFloat(operation.groups.Operand2);
   let operator = operation.groups.Operator;
-  let step = operation[0];
+  let step = operation.groups.step;
+  let stringToReplace = operation[0];
 
-  return [number1, operator, number2, step];
+  return [number1, operator, number2, step, stringToReplace];
 }
 
 function solve(number1, operator, number2) {
   switch (operator) {
+    case "**": {
+      return number1 ** number2;
+    }
     case "/": {
       return number1 / number2;
     }
@@ -116,8 +141,15 @@ function solve(number1, operator, number2) {
   }
 }
 
-function replaceNextStep(equation, step, result) {
-  let newEquation = equation.replace(step, result);
+function replaceNextStep(equation, stringToReplace, result) {
+  let newEquation = equation.replace(stringToReplace, result);
   console.log(`${JSON.stringify(newEquation)} equation res`);
+  let bracketsException = /^\((?<finalAnswer>-*\d+\.?\d*e*\d*)\)$/.exec(
+    newEquation
+  );
+  if (bracketsException) {
+    return bracketsException.groups.finalAnswer;
+  }
+
   return newEquation;
 }
