@@ -24,46 +24,73 @@ What could be a class? calc
 
 */
 
-// function addGlobalEventListener(type, element) {
-//   document.addEventListener(type, (e) => {
-//     if (e.target.matches(element)) {
-//       console.log(e.target);
-//     }
-//   });
-// }
+const MULTIPLY_DIVIDE_REGEX =
+  /(?<operand1>\S+)\s*(?<operation>[\/\*])\s*(?<operand2>\S+)/;
+const EXPONENT_REGEX = /(?<operand1>\S+)\s*(?<operation>\^)\s*(?<operand2>\S+)/;
+const ADD_SUBTRACT_REGEX =
+  /(?<operand1>\S+)\s*(?<operation>(?<!e)[\-\+])\s*(?<operand2>\S+)/;
 
-const calc = document.querySelector("data-calc");
-
-calc.addEventListener("click", (e) => {
-  if (e.target.matches("[data-all-clear]")) {
-    Calc.allclear();
-  } else if (e.target.matches("[data-delete]")) {
-    Calc.delete();
-  } else if (e.target.matches("[data-operation]")) {
-    Calc.checkOperation();
-  } else if (e.target.matches("[data-number]")) {
-    Calc.checkNumber();
-  } else if (e.target.matches("[data-equals]")) {
-    Calc.performCalc();
-  }
-});
+const element = document.querySelector("[data-calc]");
 
 class Calc {
-  static add(a, b) {
-    return a + b;
+  static equationString = [];
+
+  static getInput() {}
+
+  static globalListener() {
+    element.addEventListener("click", (e) => {
+      if (
+        e.target.matches("[data-operation]") ||
+        e.target.matches("[data-number]")
+      ) {
+        this.equationString.push(e.target.innerText);
+      } else if (e.target.matches("[data-equals]")) {
+        let stringForm = this.equationString.toString().replace(/,/g, "");
+        this.performCalc(stringForm);
+      }
+    });
   }
-  static subtract(a, b) {
-    a - b;
-  }
-  static divide(a, b) {
-    a / b;
-  }
-  static multiply(a, b) {
-    a * b;
-  }
+
   static delete() {}
+
   static allclear() {}
-  static checkOperation() {}
-  static checkNumber() {}
-  static performCalc() {}
+
+  static handleMath({ operand1, operand2, operation }) {
+    const number1 = parseFloat(operand1);
+    const number2 = parseFloat(operand2);
+
+    switch (operation) {
+      case "*":
+        return number1 * number2;
+      case "/":
+        return number1 / number2;
+      case "+":
+        return number1 + number2;
+      case "-":
+        return number1 - number2;
+      case "^":
+        return number1 ** number2;
+    }
+  }
+
+  static performCalc(equation) {
+    if (equation.match(MULTIPLY_DIVIDE_REGEX)) {
+      const result = this.handleMath(
+        equation.match(MULTIPLY_DIVIDE_REGEX).groups
+      );
+      const newEquation = equation.replace(MULTIPLY_DIVIDE_REGEX, result);
+      return this.performCalc(newEquation);
+    } else if (equation.match(ADD_SUBTRACT_REGEX)) {
+      const result = this.handleMath(equation.match(ADD_SUBTRACT_REGEX).groups);
+
+      const newEquation = equation.replace(ADD_SUBTRACT_REGEX, result);
+
+      return this.performCalc(newEquation);
+    } else {
+      console.log(equation);
+      return parseFloat(equation);
+    }
+  }
 }
+
+Calc.globalListener();
